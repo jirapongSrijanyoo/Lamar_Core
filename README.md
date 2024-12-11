@@ -10,4 +10,5 @@ GNU General Public License (GPL) Copyright © 2024 Lamar Core
 
 โปรดเคารพสิทธิ์ของผู้สร้าง หากมีข้อสงสัย กรุณาติดต่อ Discord: loma_0531
 การละเมิดเงื่อนไขนี้อาจส่งผลให้มีการดำเนินการทางกฎหมายตามที่กฎหมายลิขสิทธิ์กำหนด
+
 เอกสารเพิ่มเติม: [GNU General Public License (GPL)](https://www.gnu.org/licenses/gpl-3.0.html)
