@@ -1,4 +1,4 @@
-Lamar Core
+# Lamar Core
 GNU General Public License (GPL) Copyright © 2024 Lamar Core
 
 โปรเจกต์นี้ได้รับการเผยแพร่ภายใต้เงื่อนไขดังต่อไปนี้:
