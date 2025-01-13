@@ -1,4 +1,4 @@
-const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, StringSelectMenuBuilder } = require('discord.js');
+const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, StringSelectMenuBuilder } = require('discord.js'); 
 const fs = require('fs');
 const path = require('path');
 
@@ -26,9 +26,16 @@ module.exports = {
         const orangeRoleId = serverData.orange;
         const roleAddChannelId = serverData.roleAddChannelId;
         const roleRemoveChannelId = serverData.roleRemoveChannelId;
+        const adminRoleId = serverData.admin;  // เพิ่มการอ่านข้อมูลบทบาท Admin
 
-        if (!yellowRoleId || !orangeRoleId || !roleAddChannelId || !roleRemoveChannelId) {
+        if (!yellowRoleId || !orangeRoleId || !roleAddChannelId || !roleRemoveChannelId || !adminRoleId) {
             return interaction.reply('ข้อมูลเซิร์ฟเวอร์ไม่ครบถ้วน กรุณาตรวจสอบการตั้งค่าก่อน');
+        }
+
+        // ตรวจสอบบทบาทของผู้ที่ใช้คำสั่ง
+        const userRoles = interaction.member.roles.cache;
+        if (!userRoles.has(adminRoleId)) {
+            return interaction.reply('คุณไม่มีสิทธิ์ในการใช้คำสั่งนี้');
         }
 
         const selectedUser = interaction.options.getUser('user');
