@@ -1,5 +1,5 @@
 # Lamar Core
-GNU General Public License (GPL) Copyright © 2024 Lamar Core
+GNU General Public License (GPL) Copyright © 2024-2025 Lamar Core
 
 โปรเจกต์นี้ได้รับการเผยแพร่ภายใต้เงื่อนไขดังต่อไปนี้:
 1. Source code นี้เผยแพร่ภายใต้เงื่อนไขของ [GNU General Public License (GPL)](https://www.gnu.org/licenses/gpl-3.0.html)
