@@ -96,10 +96,10 @@ module.exports = {
                 .setColor('#0099ff')
                 .setTitle(`การจัดการกับผู้ใช้: @${member.user.username}`)
                 .addFields(
-                    { name: 'จัดการโดย', value: `${interaction.user}`, inline: false },
                     { name: 'User Nick', value: member.nickname || 'ไม่มี', inline: true },
                     { name: 'User Name', value: member.user.username, inline: true },
                     { name: 'User ID', value: member.user.id, inline: true },
+                    { name: 'จัดการโดย', value: `${interaction.user}`, inline: false },
                 )
                 .setTimestamp()
                 .setThumbnail(member.user.displayAvatarURL())
