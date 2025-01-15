@@ -20,9 +20,9 @@ Put your bot token and discord id in the .env file.
 node .
 ```
 # ความที่ต้องการ
-NodeJs v20 หรือใหม่กว่า
-Discord Bot Token หาได้จาก [Discord Developers Portal](https://discord.com/developers/applications)
-Discord User ID หาได้จากการกดคัดลอกไอดีผู้ใช้
+- NodeJs v20 หรือใหม่กว่า
+- Discord Bot Token หาได้จาก [Discord Developers Portal](https://discord.com/developers/applications)
+- Discord User ID หาได้จากการกดคัดลอกไอดีผู้ใช้
 # คำสั่งของบอท
 `/role_editor {role}` เพิ่มบทบาทสำหรับจัดการโดยต้องใส่ ใบเหลือง ใบส้ม และบทบาทแอดมินสำหรับให้คนที่มีบทบาทนี้ใช้คำสั่งได้
 
