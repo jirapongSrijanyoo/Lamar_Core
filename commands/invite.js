@@ -3,7 +3,7 @@ const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder } = r
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('invite')
-        .setDescription('Get the invite link to add the bot to your server'),
+        .setDescription('เชิญบอทเข้าเซิร์ฟเวอร์'),
     async execute(interaction) {
         // สร้างลิงค์เชิญโดยใช้ Client ID ของบอท
         const inviteLink = `https://discord.com/oauth2/authorize?client_id=${interaction.client.user.id}&permissions=8&scope=bot%20applications.commands`;

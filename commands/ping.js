@@ -3,7 +3,7 @@ const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('ping')
-        .setDescription('Shows the bot\'s latency and uptime.'),
+        .setDescription('เช็คค่าปิงของบอท'),
     async execute(interaction) {
         const latency = Date.now() - interaction.createdTimestamp;
         const uptime = process.uptime();

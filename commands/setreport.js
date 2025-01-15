@@ -5,7 +5,7 @@ const path = require('path');
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('set_report_channel')
-        .setDescription('Create role-add, role-remove, and ban channels, and save the channel IDs'),
+        .setDescription('สร้างห้องรายงานการใส่บทบาท'),
     async execute(interaction) {
         const guildId = interaction.guild.id;
         const serverFilePath = path.join(__dirname, '..', 'discord_server', `${guildId}.json`);

@@ -5,7 +5,7 @@ const path = require('path');
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('role_editor')
-        .setDescription('Edit and save role IDs')
+        .setDescription('เพิ่ม ลบ แก้ไข บทบาท')
         .addMentionableOption(option => option.setName('role').setDescription('Select a role').setRequired(true)),
     async execute(interaction) {
         // ตรวจสอบว่าเป็นเจ้าของเซิร์ฟเวอร์หรือไม่

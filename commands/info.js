@@ -2,7 +2,7 @@ const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder } = r
 const si = require('systeminformation'); // ใช้สำหรับข้อมูลระบบ
 
 module.exports = {
-    data: new SlashCommandBuilder().setName('info').setDescription('Get information about the bot and system'),
+    data: new SlashCommandBuilder().setName('info').setDescription('ข้อมูลของบอท'),
     async execute(interaction) {
         const botName = interaction.client.user.username;
         const botTag = interaction.client.user.tag;
@@ -11,12 +11,21 @@ module.exports = {
         const guildCount = interaction.client.guilds.cache.size;
 
         // ดึงข้อมูลระบบแบบละเอียด
-        const [osInfo, memInfo, cpuInfo] = await Promise.all([si.osInfo(), si.mem(), si.cpu()]);
+        const [osInfo, memInfo, cpuInfo, diskInfo] = await Promise.all([
+            si.osInfo(),
+            si.mem(),
+            si.cpu(),
+            si.fsSize()
+        ]);
 
         const osName = `${osInfo.distro} ${osInfo.release}`; // เช่น Windows 11 Home Single Language 23H2
         const totalRam = memInfo.total / 1024 / 1024 / 1024; // GB
         const usedRam = (memInfo.total - memInfo.available) / 1024 / 1024 / 1024; // GB
         const cpuModel = cpuInfo.manufacturer + ' ' + cpuInfo.brand;
+
+        // คำนวณพื้นที่เก็บข้อมูล
+        const totalDisk = diskInfo.reduce((total, disk) => total + disk.size, 0) / 1024 / 1024 / 1024; // GB
+        const usedDisk = diskInfo.reduce((used, disk) => used + disk.used, 0) / 1024 / 1024 / 1024; // GB
 
         // ข้อมูลเวอร์ชัน
         const nodeVersion = process.version;
@@ -34,11 +43,11 @@ module.exports = {
                 `┊ **OS:** ${osName}\n` +
                 `┊ **CPU:** ${cpuModel}\n` +
                 `┊ **RAM Usage:** ${usedRam.toFixed(2)} GB / ${totalRam.toFixed(2)} GB\n` +
-                `┊ **API:** Lamar Core 2.1\n` +
+                `┊ **Disk Usage:** ${usedDisk.toFixed(2)} GB / ${totalDisk.toFixed(2)} GB\n` +
                 `┊ **Node.js:** ${nodeVersion}\n` +
                 `┊ **Discord.js:** ${discordVersion}`
             )
-            .setColor('#d6a3ff')
+            .setColor('#b6a3ff')
             .setFooter({ text: 'Powered by Lamar Core' })
             .setTimestamp();
 
