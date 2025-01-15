@@ -2,28 +2,32 @@
 - บอทใส่บทบาทเตือน ใบเหลือง ใบส้ม
 
 # วิธีนำโค้ดไปใช้
-```git clone https://github.com/jirapongSrijanyoo/Lamar_Core.git
-cd Lamar_Core
-npm i discord.js dotenv systeminformation
+## โคลน repo นี้
+```git clone https://github.com/jirapongSrijanyoo/Lamar_Core.git```
+เข้าไดเรทเทอรีของบอท
+```cd Lamar_Core```
+ติดตั้งแพ็กเกจโดยใช้ [NPM](https://www.npmjs.com/)
+```npm i discord.js dotenv systeminformation```
 Put your bot token and discord id in the .env file.
-node .
-```
-ไม่อยากโฮสต์บอทเองหรอ?? ใช้บอทของเราฟรีได้ [ที่นี่](https://discord.com/oauth2/authorize?client_id=1270718428201877504)
-
+รันบอท
+```node .```
+# ความที่ต้องการ
+NodeJs v20 หรือใหม่กว่า
+Discord Bot Token หาได้จาก [Discord Developers Portal](https://discord.com/developers/applications)
+Discord User ID หาได้จากการกดคัดลอกไอดีผู้ใช้
 # คำสั่งของบอท
 `/role_editor {role}` เพิ่มบทบาทสำหรับจัดการโดยต้องใส่ ใบเหลือง ใบส้ม และบทบาทแอดมินสำหรับให้คนที่มีบทบาทนี้ใช้คำสั่งได้
 
-`/set_report_channel` สร้างห้องสำหรับรายงานการใส่และลบบทบาท **แนะนำปิดบอทป้องกันสแปมอย่าง Wick หรือ Dyno ก่อนใช้งาน**
+`/set_report_channel` สร้างห้องสำหรับรายงานการใส่และลบบทบาท `แนะนำปิดบอทป้องกันสแปมอย่าง Wick หรือ Dyno ก่อนใช้งาน`
 
 `/manage_users {user}` จัดการผู้ใช้ เลือกให้บทบาทใบเหลือง ใบส้ม หรือแบน
 
 - คำสั่งอื่นๆ `/ping` เช็คปิงของบอท `/info` ข้อมูลเกี่ยวกับบอท `/invite` เชิญบอทไปใช้งานในเซิร์ฟเวอร์อื่น
-
-## หากคุณสนใจเข้าร่วมเซิร์ฟเวอร์ Discord 
+## ไม่อยากโฮสต์บอทเองหรอ?? ใช้บอทเราสิ
+เชิญบอทไปใช้งาน [คลิกที่นี่](https://discord.com/oauth2/authorize?client_id=1270718428201877504)
+## หากคุณสนใจเข้าร่วมเซิร์ฟเวอร์ Discord ของเรา
 เข้าร่วมเซิร์ฟเวอร์ [คลิกที่นี่](https://discord.gg/cF3sXPHjzn)
-
-# โปรดอ่าน เงื่อนไขการใช้และเอกสารลิขสิทธิ์ก่อนใช้งาน
-
+## โปรดอ่าน เงื่อนไขการใช้และเอกสารลิขสิทธิ์
 GNU General Public License (GPL) Copyright © 2024-2025 Lamar Core
 
 โปรเจกต์นี้ได้รับการเผยแพร่ภายใต้เงื่อนไขดังต่อไปนี้:
