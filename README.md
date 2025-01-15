@@ -3,14 +3,22 @@
 
 # วิธีนำโค้ดไปใช้
 ## โคลน repo นี้
-```git clone https://github.com/jirapongSrijanyoo/Lamar_Core.git```
+```
+git clone https://github.com/jirapongSrijanyoo/Lamar_Core.git
+```
 เข้าไดเรทเทอรีของบอท
-```cd Lamar_Core```
+```
+cd Lamar_Core
+```
 ติดตั้งแพ็กเกจโดยใช้ [NPM](https://www.npmjs.com/)
-```npm i discord.js dotenv systeminformation```
+```
+npm i discord.js dotenv systeminformation
+```
 Put your bot token and discord id in the .env file.
 รันบอท
-```node .```
+```
+node .
+```
 # ความที่ต้องการ
 NodeJs v20 หรือใหม่กว่า
 Discord Bot Token หาได้จาก [Discord Developers Portal](https://discord.com/developers/applications)
