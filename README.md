@@ -14,7 +14,7 @@ cd Lamar_Core
 ```
 npm i discord.js dotenv systeminformation
 ```
-Put your bot token and discord id in the .env file.
+ใส่ token บอทและไอดีผู้ใช้ของคุณในไฟล์ .env
 รันบอท
 ```
 node .
