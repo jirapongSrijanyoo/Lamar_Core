@@ -64,10 +64,10 @@ module.exports = {
                     .setCustomId('user_action')
                     .setPlaceholder('เลือกการกระทำ')
                     .addOptions(
-                        { label: 'เพิ่มใบเหลือง', value: 'add_yellow' },
-                        { label: 'เพิ่มใบส้ม', value: 'add_orange' },
-                        { label: 'ถอดใบเหลือง', value: 'remove_yellow' },
-                        { label: 'ถอดใบส้ม', value: 'remove_orange' },
+                        { label: 'เพิ่มเตือนครั้งที่ 1', value: 'add_yellow' },
+                        { label: 'เพิ่มเตือนครั้งที่ 2', value: 'add_orange' },
+                        { label: 'ลบเตือนครั้งที่ 1', value: 'remove_yellow' },
+                        { label: 'ลบเตือนครั้งที่ 2', value: 'remove_orange' },
                         { label: 'แบนผู้ใช้', value: 'ban_user' },
                         { label: 'ยกเลิก', value: 'cancel' },
                     ),
@@ -108,45 +108,45 @@ module.exports = {
             switch (action) {
                 case 'add_yellow':
                     await member.roles.add(yellowRoleId);
-                    replyMessage = `ได้รับใบเหลืองแล้ว`;
+                    replyMessage = `ได้รับเตือนครั้งที่ 1 แล้ว`;
 
                     // ส่งข้อมูลไปยังห้อง roleAddChannelId
                     const roleAddChannel = guild.channels.cache.get(roleAddChannelId);
                     if (roleAddChannel) {
-                        roleAddChannel.send({content: `${member.user}`, embeds: [embed.setTitle(`@${member.user.username} ถูกเพิ่มใบเหลือง`)] });
+                        roleAddChannel.send({content: `${member.user}`, embeds: [embed.setTitle(`@${member.user.username} ถูกเพิ่มเตือนครั้งที่ 1`)] });
                     }
                     break;
 
                 case 'add_orange':
                     await member.roles.add(orangeRoleId);
-                    replyMessage = `ได้รับใบส้มแล้ว`;
+                    replyMessage = `ได้รับเตือนครั้งที่ 2 แล้ว`;
 
                     // ส่งข้อมูลไปยังห้อง roleAddChannelId
                     const roleAddOrangeChannel = guild.channels.cache.get(roleAddChannelId);
                     if (roleAddOrangeChannel) {
-                        roleAddOrangeChannel.send({content: `${member.user}`, embeds: [embed.setTitle(`@${member.user.username} ถูกเพิ่มใบส้ม`)] });
+                        roleAddOrangeChannel.send({content: `${member.user}`, embeds: [embed.setTitle(`@${member.user.username} ถูกเพิ่มเตือนครั้งที่ 2`)] });
                     }
                     break;
 
                 case 'remove_yellow':
                     await member.roles.remove(yellowRoleId);
-                    replyMessage = `ถอดใบเหลืองแล้ว`;
+                    replyMessage = `ลบเตือนครั้งที่ 1 แล้ว`;
 
                     // ส่งข้อมูลไปยังห้อง roleRemoveChannelId
                     const roleRemoveChannel = guild.channels.cache.get(roleRemoveChannelId);
                     if (roleRemoveChannel) {
-                        roleRemoveChannel.send({content: `${member.user}`, embeds: [embed.setTitle(`@${member.user.username} ถูกถอดใบเหลือง`)] });
+                        roleRemoveChannel.send({content: `${member.user}`, embeds: [embed.setTitle(`@${member.user.username} ถูกลบเตือนครั้งที่ 1`)] });
                     }
                     break;
 
                 case 'remove_orange':
                     await member.roles.remove(orangeRoleId);
-                    replyMessage = `ถอดใบส้มแล้ว`;
+                    replyMessage = `ลบเตือนครั้งที่ 2 แล้ว`;
 
                     // ส่งข้อมูลไปยังห้อง roleRemoveChannelId
                     const roleRemoveOrangeChannel = guild.channels.cache.get(roleRemoveChannelId);
                     if (roleRemoveOrangeChannel) {
-                        roleRemoveOrangeChannel.send({content: `${member.user}`, embeds: [embed.setTitle(`@${member.user.username} ถูกถอดใบส้ม`)] });
+                        roleRemoveOrangeChannel.send({content: `${member.user}`, embeds: [embed.setTitle(`@${member.user.username} ถูกลบเตือนครั้งที่ 2`)] });
                     }
                     break;
 
