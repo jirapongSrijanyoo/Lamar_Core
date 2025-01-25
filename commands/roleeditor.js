@@ -29,11 +29,11 @@ module.exports = {
                     .setPlaceholder('เลือกประเภทของ role หรือ ลบข้อมูล')
                     .addOptions(
                         {
-                            label: 'ใบเหลือง',
+                            label: 'เตือนครั้งที่ 1',
                             value: 'yellow',
                         },
                         {
-                            label: 'ใบส้ม',
+                            label: 'เตือนครั้งที่ 2',
                             value: 'orange',
                         },
                         {
@@ -114,7 +114,7 @@ module.exports = {
                 if (existingRoleCategory) {
                     // หาก role id นี้มีอยู่แล้วในประเภทอื่น แจ้งผู้ใช้
                     await selectInteraction.reply({
-                        content: `ผิดพลาด Role "${role.name}" ถูกบันทึกไว้แล้วในประเภท "${existingRoleCategory === 'yellow' ? 'ใบเหลือง' : existingRoleCategory === 'orange' ? 'ใบส้ม' : 'แอดมิน'}"`,
+                        content: `ผิดพลาด Role "${role.name}" ถูกบันทึกไว้แล้วในประเภท "${existingRoleCategory === 'yellow' ? 'เตือนครั้งที่ 1' : existingRoleCategory === 'orange' ? 'เตือนครั้งที่ 2' : 'แอดมิน'}"`,
                         ephemeral: true
                     });
                 } else {
@@ -127,14 +127,14 @@ module.exports = {
                         .setColor('#d6a3ff')
                         .setAuthor({ name: `${botName} | Role editor`, iconURL: botAvatar })
                         .setTitle('ข้อมูลการตั้งค่า role')
-                        .setDescription(`Role "${role.name}" ถูกบันทึกในประเภท: ${roleCategory === 'yellow' ? 'ใบเหลือง' : roleCategory === 'orange' ? 'ใบส้ม' : 'แอดมิน'}`)
+                        .setDescription(`Role "${role.name}" ถูกบันทึกในประเภท: ${roleCategory === 'yellow' ? 'เตือนครั้งที่ 1' : roleCategory === 'orange' ? 'เตือนครั้งที่ 2' : 'แอดมิน'}`)
                         .setTimestamp()
                         .setFooter({ text: `จัดการโดย ${interaction.user.username}`, iconURL: interaction.user.displayAvatarURL() });
 
                     await selectInteraction.reply({ embeds: [embed], ephemeral: true });
 
                     // แจ้งเตือนใน console
-                    console.log(`[${interaction.guild.name}] ผู้ใช้ ${interaction.user.username} ได้บันทึก role: ${role.name} ลงในประเภท "${roleCategory === 'yellow' ? 'ใบเหลือง' : roleCategory === 'orange' ? 'ใบส้ม' : 'แอดมิน'}"`);
+                    console.log(`[${interaction.guild.name}] ผู้ใช้ ${interaction.user.username} ได้บันทึก role: ${role.name} ลงในประเภท "${roleCategory === 'yellow' ? 'เตือนครั้งที่ 1' : roleCategory === 'orange' ? 'เตือนครั้งที่ 2' : 'แอดมิน'}"`);
                 }
             }
 
