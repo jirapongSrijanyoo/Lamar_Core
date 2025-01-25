@@ -26,9 +26,10 @@ module.exports = {
         const orangeRoleId = serverData.orange;
         const roleAddChannelId = serverData.roleAddChannelId;
         const roleRemoveChannelId = serverData.roleRemoveChannelId;
+        const banChannelId = serverData.banChannelId;
         const adminRoleId = serverData.admin;  // เพิ่มการอ่านข้อมูลบทบาท Admin
 
-        if (!yellowRoleId || !orangeRoleId || !roleAddChannelId || !roleRemoveChannelId || !adminRoleId) {
+        if (!yellowRoleId || !orangeRoleId || !roleAddChannelId || !roleRemoveChannelId || !adminRoleId || !banChannelId) {
             return interaction.reply('ข้อมูลเซิร์ฟเวอร์ไม่ครบถ้วน กรุณาตรวจสอบการตั้งค่าก่อน');
         }
 
@@ -149,16 +150,20 @@ module.exports = {
                     }
                     break;
 
-                case 'ban_user':
-                    await member.ban({ reason: 'แบนจากการใช้คำสั่งจัดการผู้ใช้' });
-                    replyMessage = `ถูกแบนแล้ว`;
+               case 'ban_user':
+   					 await member.ban({ reason: 'แบนจากการใช้คำสั่งจัดการผู้ใช้' });
+   					 replyMessage = `ถูกแบนแล้ว`;
 
-                    // ส่งข้อมูลไปยังห้อง roleRemoveChannelId
-                    const banChannel = guild.channels.cache.get(roleRemoveChannelId);
-                    if (banChannel) {
-                        banChannel.send({content: `${member.user}`, embeds: [embed.setTitle(`@${member.user.username} ถูกแบน`)] });
-                    }
-                    break;
+    				// ส่งข้อมูลไปยังห้อง banChannelId
+   					 const banChannel = guild.channels.cache.get(banChannelId); // เปลี่ยนชื่อเป็น banChannel
+   					 if (banChannel) {
+   				     	banChannel.send({ 
+        		   		 	   content: `${member.user}`, 
+        		   		       embeds: [embed.setTitle(`@${member.user.username} ถูกแบน`)] 
+        					});
+   					 }
+    				 break;
+
 
                 case 'cancel':
                     replyMessage = 'การกระทำถูกยกเลิก';
