@@ -10,17 +10,25 @@ git clone https://github.com/jirapongSrijanyoo/Lamar_Core.git
 ```
 cd Lamar_Core
 ```
-ติดตั้งแพ็กเกจโดยใช้ [NPM](https://www.npmjs.com/)
+ติดตั้งแพ็กเกจโดยใช้ [NPM](https://www.npmjs.com/) หรือ [Bun](https://bun.sh/)
 ```
-npm i discord.js dotenv systeminformation
+npm i discord.js dotenv systeminformation colorette pidusage
+```
+หากใช้ Bun
+```
+bun add discord.js dotenv systeminformation colorette pidusage
 ```
 ใส่ token บอทและไอดีผู้ใช้ของคุณในไฟล์ .env
 รันบอท
 ```
 node .
 ```
+หากใช้ Bun
+```
+bun run index.js
+```
 # ความที่ต้องการ
-- NodeJs v20 หรือใหม่กว่า
+- NodeJs หรือ Bun
 - Discord Bot Token หาได้จาก [Discord Developers Portal](https://discord.com/developers/applications)
 - Discord User ID หาได้จากการกดคัดลอกไอดีผู้ใช้
 # คำสั่งของบอท
