@@ -4,13 +4,7 @@ const { syncCommands } = require('./utils/commandManager');
 const fs = require('fs');
 const path = require('path');
 const { saveServerData, deleteServerData } = require('./utils/serverDataManager');
-
-// ฟังก์ชัน loginfo สำหรับแสดงข้อความใน console
-function loginfo(message) {
-    const now = new Date();
-    const time = now.toLocaleTimeString('en-GB', { hour12: false }); // ใช้เวลาของเครื่อง
-    console.log(`[${time} INFO] ${message}`);
-}
+const { loginfo, logwarn, logerror, logdebug } = require('./utils/logger'); // นำเข้า logger
 
 // แสดงข้อความ ASCII Art
 console.log(`
@@ -49,7 +43,7 @@ client.once('ready', async () => {
     try {
         await syncCommands(commands, client.guilds.cache.map(guild => guild.id), process.env.TOKEN, client.user.id, loginfo);
     } catch (error) {
-        console.error('Error syncing commands:', error);
+        logerror(`Error syncing commands: ${error.message}`);
     }
 
     // อัปเดตข้อมูลทุก 10 วินาที
@@ -72,7 +66,7 @@ client.once('ready', async () => {
         existingFiles.forEach(guildId => {
             if (!currentGuilds.includes(guildId)) {
                 deleteServerData(guildId);
-                loginfo(`Removed server with ID: ${guildId}`);
+                logwarn(`Removed server with ID: ${guildId}`);
             }
         });
     }, 10000); // อัปเดตทุก 10 วินาที
@@ -81,7 +75,7 @@ client.once('ready', async () => {
 // เมื่อบอทออกจากเซิร์ฟเวอร์
 client.on('guildDelete', guild => {
     deleteServerData(guild.id);
-    loginfo(`Removed server: ${guild.name}`);
+    logwarn(`Removed server: ${guild.name}`);
 });
 
 // เมื่อบอทเข้าร่วมเซิร์ฟเวอร์ใหม่
@@ -102,7 +96,7 @@ client.on('interactionCreate', async interaction => {
             await command.execute(interaction);
             loginfo(`${interaction.user.tag} used /${commandName} in ${interaction.guild.name}`);
         } catch (error) {
-            console.error(`Error executing /${commandName}:`, error);
+            logerror(`Error executing /${commandName}: ${error.message}`);
             await interaction.reply({ content: 'There was an error while executing this command!', ephemeral: true });
         }
     }
