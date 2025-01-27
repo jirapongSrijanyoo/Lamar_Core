@@ -1,5 +1,6 @@
 const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder } = require('discord.js');
 const si = require('systeminformation'); // ใช้สำหรับข้อมูลระบบ
+const pidusage = require('pidusage'); // ใช้สำหรับข้อมูล CPU และ RAM ของกระบวนการ
 
 module.exports = {
     data: new SlashCommandBuilder().setName('info').setDescription('ข้อมูลของบอท'),
@@ -18,17 +19,36 @@ module.exports = {
             si.fsSize()
         ]);
 
+        // ดึงข้อมูล CPU และ RAM ของกระบวนการปัจจุบัน
+        const usage = await pidusage(process.pid);
+
+        // ข้อมูล OS
         const osName = `${osInfo.distro} ${osInfo.release}`; // เช่น Windows 11 Home Single Language 23H2
-        const totalRam = memInfo.total / 1024 / 1024 / 1024; // GB
-        const usedRam = (memInfo.total - memInfo.available) / 1024 / 1024 / 1024; // GB
+
+        // ข้อมูล CPU
         const cpuModel = cpuInfo.manufacturer + ' ' + cpuInfo.brand;
 
-        // คำนวณพื้นที่เก็บข้อมูล
+        // ข้อมูล Memory
+        const totalMem = (memInfo.total / 1024 / 1024 / 1024).toFixed(2); // GB
+        const usedMem = (usage.memory / 1024 / 1024).toFixed(2); // MB
+
+        // ข้อมูล Disk
         const totalDisk = diskInfo.reduce((total, disk) => total + disk.size, 0) / 1024 / 1024 / 1024; // GB
         const usedDisk = diskInfo.reduce((used, disk) => used + disk.used, 0) / 1024 / 1024 / 1024; // GB
 
+        // ตรวจสอบ runtime environment (Node.js หรือ Bun)
+        let runtimeName = 'Unknown';
+        let runtimeVersion = 'Unknown';
+
+        if (typeof Bun !== 'undefined') {
+            runtimeName = 'Bun';
+            runtimeVersion = Bun.version;
+        } else if (process.release && process.release.name === 'node') {
+            runtimeName = 'Node.js';
+            runtimeVersion = process.version;
+        }
+
         // ข้อมูลเวอร์ชัน
-        const nodeVersion = process.version;
         const discordVersion = require('discord.js').version;
 
         // สร้าง Embed สำหรับแสดงข้อมูล
@@ -42,9 +62,9 @@ module.exports = {
                 `┊ **Guild(s):** ${guildCount}\n` +
                 `┊ **OS:** ${osName}\n` +
                 `┊ **CPU:** ${cpuModel}\n` +
-                `┊ **RAM Usage:** ${usedRam.toFixed(2)} GB / ${totalRam.toFixed(2)} GB\n` +
+                `┊ **Memory Usage:** ${usedMem} MB / ${totalMem} GB\n` +
                 `┊ **Disk Usage:** ${usedDisk.toFixed(2)} GB / ${totalDisk.toFixed(2)} GB\n` +
-                `┊ **Node.js:** ${nodeVersion}\n` +
+                `┊ **Runtime:** ${runtimeName} ${runtimeVersion}\n` +
                 `┊ **Discord.js:** ${discordVersion}`
             )
             .setColor('#b6a3ff')
