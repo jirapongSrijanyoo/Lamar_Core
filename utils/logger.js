@@ -18,7 +18,7 @@ function formatDate() {
 
 // ฟังก์ชันสำหรับคำนวณ memory usage
 function getMemoryUsage() {
-    const memoryUsage = process.memoryUsage().rss; // Resident Set Size
+    const memoryUsage = process.memoryUsage().heapUsed; // Resident Set Size
     return formatBytes(memoryUsage);
 }
 

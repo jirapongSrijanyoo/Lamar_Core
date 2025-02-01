@@ -1,6 +1,7 @@
 const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, StringSelectMenuBuilder } = require('discord.js'); 
 const fs = require('fs');
 const path = require('path');
+const { loginfo, logwarn, logerror, logdebug } = require('../utils/logger'); // นำเข้า logger ทั้งหมด
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -14,11 +15,21 @@ module.exports = {
     async execute(interaction) {
         const guildId = interaction.guild.id;
         const serverFilePath = path.join(__dirname, '..', 'discord_server', `${guildId}.json`);
+        
+        logdebug(`Starting execution of manage_users command for guild ${guildId}...`);
 
         // ตรวจสอบว่าไฟล์เซิร์ฟเวอร์มีอยู่หรือไม่
         let serverData = {};
-        if (fs.existsSync(serverFilePath)) {
-            serverData = JSON.parse(fs.readFileSync(serverFilePath, 'utf-8'));
+        try {
+            if (fs.existsSync(serverFilePath)) {
+                serverData = JSON.parse(fs.readFileSync(serverFilePath, 'utf-8'));
+                logdebug(`Loaded server data for guild ${guildId}.`);
+            } else {
+                logwarn(`Server file not found for guild ${guildId}.`);
+            }
+        } catch (error) {
+            logerror(`Error reading server file for guild ${guildId}: ${error.message}`);
+            return interaction.reply('เกิดข้อผิดพลาดในการอ่านข้อมูลเซิร์ฟเวอร์');
         }
 
         // ตรวจสอบว่า role ที่ต้องการมีอยู่ในไฟล์หรือไม่
@@ -30,12 +41,14 @@ module.exports = {
         const adminRoleId = serverData.admin;  // เพิ่มการอ่านข้อมูลบทบาท Admin
 
         if (!yellowRoleId || !orangeRoleId || !roleAddChannelId || !roleRemoveChannelId || !adminRoleId || !banChannelId) {
+            logwarn(`Missing server data for guild ${guildId}.`);
             return interaction.reply('ข้อมูลเซิร์ฟเวอร์ไม่ครบถ้วน กรุณาตรวจสอบการตั้งค่าก่อน');
         }
 
         // ตรวจสอบบทบาทของผู้ที่ใช้คำสั่ง
         const userRoles = interaction.member.roles.cache;
         if (!userRoles.has(adminRoleId)) {
+            logwarn(`User ${interaction.user.id} attempted to use the command without permission in guild ${guildId}.`);
             return interaction.reply('คุณไม่มีสิทธิ์ในการใช้คำสั่งนี้');
         }
 
@@ -43,8 +56,11 @@ module.exports = {
         const member = interaction.guild.members.cache.get(selectedUser.id);
 
         if (!member) {
+            logwarn(`User ${selectedUser.id} not found in guild ${guildId}.`);
             return interaction.reply('ไม่พบผู้ใช้ที่เลือก');
         }
+
+        logdebug(`User ${selectedUser.id} selected for management in guild ${guildId}.`);
 
         // สร้าง Embed สำหรับรายละเอียดผู้ใช้
         const userEmbed = new EmbedBuilder()
@@ -103,79 +119,87 @@ module.exports = {
                     { name: 'จัดการโดย', value: `${interaction.user}`, inline: false },
                 )
                 .setTimestamp()
-                .setThumbnail(member.user.displayAvatarURL())
+                .setThumbnail(member.user.displayAvatarURL());
 
-            switch (action) {
-                case 'add_yellow':
-                    await member.roles.add(yellowRoleId);
-                    replyMessage = `ได้รับเตือนครั้งที่ 1 แล้ว`;
+            try {
+                switch (action) {
+                    case 'add_yellow':
+                        await member.roles.add(yellowRoleId);
+                        replyMessage = `ได้รับเตือนครั้งที่ 1 แล้ว`;
 
-                    // ส่งข้อมูลไปยังห้อง roleAddChannelId
-                    const roleAddChannel = guild.channels.cache.get(roleAddChannelId);
-                    if (roleAddChannel) {
-                        roleAddChannel.send({content: `${member.user}`, embeds: [embed.setTitle(`@${member.user.username} ถูกเพิ่มเตือนครั้งที่ 1`)] });
-                    }
-                    break;
+                        // ส่งข้อมูลไปยังห้อง roleAddChannelId
+                        const roleAddChannel = guild.channels.cache.get(roleAddChannelId);
+                        if (roleAddChannel) {
+                            roleAddChannel.send({content: `${member.user}`, embeds: [embed.setTitle(`@${member.user.username} ถูกเพิ่มเตือนครั้งที่ 1`)] });
+                        }
+                        break;
 
-                case 'add_orange':
-                    await member.roles.add(orangeRoleId);
-                    replyMessage = `ได้รับเตือนครั้งที่ 2 แล้ว`;
+                    case 'add_orange':
+                        await member.roles.add(orangeRoleId);
+                        replyMessage = `ได้รับเตือนครั้งที่ 2 แล้ว`;
 
-                    // ส่งข้อมูลไปยังห้อง roleAddChannelId
-                    const roleAddOrangeChannel = guild.channels.cache.get(roleAddChannelId);
-                    if (roleAddOrangeChannel) {
-                        roleAddOrangeChannel.send({content: `${member.user}`, embeds: [embed.setTitle(`@${member.user.username} ถูกเพิ่มเตือนครั้งที่ 2`)] });
-                    }
-                    break;
+                        // ส่งข้อมูลไปยังห้อง roleAddChannelId
+                        const roleAddOrangeChannel = guild.channels.cache.get(roleAddChannelId);
+                        if (roleAddOrangeChannel) {
+                            roleAddOrangeChannel.send({content: `${member.user}`, embeds: [embed.setTitle(`@${member.user.username} ถูกเพิ่มเตือนครั้งที่ 2`)] });
+                        }
+                        break;
 
-                case 'remove_yellow':
-                    await member.roles.remove(yellowRoleId);
-                    replyMessage = `ลบเตือนครั้งที่ 1 แล้ว`;
+                    case 'remove_yellow':
+                        await member.roles.remove(yellowRoleId);
+                        replyMessage = `ลบเตือนครั้งที่ 1 แล้ว`;
 
-                    // ส่งข้อมูลไปยังห้อง roleRemoveChannelId
-                    const roleRemoveChannel = guild.channels.cache.get(roleRemoveChannelId);
-                    if (roleRemoveChannel) {
-                        roleRemoveChannel.send({content: `${member.user}`, embeds: [embed.setTitle(`@${member.user.username} ถูกลบเตือนครั้งที่ 1`)] });
-                    }
-                    break;
+                        // ส่งข้อมูลไปยังห้อง roleRemoveChannelId
+                        const roleRemoveChannel = guild.channels.cache.get(roleRemoveChannelId);
+                        if (roleRemoveChannel) {
+                            roleRemoveChannel.send({content: `${member.user}`, embeds: [embed.setTitle(`@${member.user.username} ถูกลบเตือนครั้งที่ 1`)] });
+                        }
+                        break;
 
-                case 'remove_orange':
-                    await member.roles.remove(orangeRoleId);
-                    replyMessage = `ลบเตือนครั้งที่ 2 แล้ว`;
+                    case 'remove_orange':
+                        await member.roles.remove(orangeRoleId);
+                        replyMessage = `ลบเตือนครั้งที่ 2 แล้ว`;
 
-                    // ส่งข้อมูลไปยังห้อง roleRemoveChannelId
-                    const roleRemoveOrangeChannel = guild.channels.cache.get(roleRemoveChannelId);
-                    if (roleRemoveOrangeChannel) {
-                        roleRemoveOrangeChannel.send({content: `${member.user}`, embeds: [embed.setTitle(`@${member.user.username} ถูกลบเตือนครั้งที่ 2`)] });
-                    }
-                    break;
+                        // ส่งข้อมูลไปยังห้อง roleRemoveChannelId
+                        const roleRemoveOrangeChannel = guild.channels.cache.get(roleRemoveChannelId);
+                        if (roleRemoveOrangeChannel) {
+                            roleRemoveOrangeChannel.send({content: `${member.user}`, embeds: [embed.setTitle(`@${member.user.username} ถูกลบเตือนครั้งที่ 2`)] });
+                        }
+                        break;
 
-               case 'ban_user':
-   					 await member.ban({ reason: 'แบนจากการใช้คำสั่งจัดการผู้ใช้' });
-   					 replyMessage = `ถูกแบนแล้ว`;
+                    case 'ban_user':
+                        await member.ban({ reason: 'แบนจากการใช้คำสั่งจัดการผู้ใช้' });
+                        replyMessage = `ถูกแบนแล้ว`;
 
-    				// ส่งข้อมูลไปยังห้อง banChannelId
-   					 const banChannel = guild.channels.cache.get(banChannelId); // เปลี่ยนชื่อเป็น banChannel
-   					 if (banChannel) {
-   				     	banChannel.send({ 
-        		   		 	   content: `${member.user}`, 
-        		   		       embeds: [embed.setTitle(`@${member.user.username} ถูกแบน`)] 
-        					});
-   					 }
-    				 break;
+                        // ส่งข้อมูลไปยังห้อง banChannelId
+                        const banChannel = guild.channels.cache.get(banChannelId); // เปลี่ยนชื่อเป็น banChannel
+                        if (banChannel) {
+                            banChannel.send({ 
+                                content: `${member.user}`, 
+                                embeds: [embed.setTitle(`@${member.user.username} ถูกแบน`)] 
+                            });
+                        }
+                        break;
 
+                    case 'cancel':
+                        replyMessage = 'การกระทำถูกยกเลิก';
+                        break;
+                }
 
-                case 'cancel':
-                    replyMessage = 'การกระทำถูกยกเลิก';
-                    break;
+                // ตอบกลับครั้งเดียว
+                await actionInteraction.update({
+                    content: `<@${interaction.user.id}> ${replyMessage}`,
+                    embeds: [embed],
+                    components: [],
+                });
+            } catch (error) {
+                logerror(`Error while performing action ${action} for user ${selectedUser.id} in guild ${guildId}: ${error.message}`);
+                await actionInteraction.update({
+                    content: `เกิดข้อผิดพลาดในการดำเนินการ`,
+                    embeds: [embed],
+                    components: [],
+                });
             }
-
-            // ตอบกลับครั้งเดียว
-            await actionInteraction.update({
-                content: `<@${interaction.user.id}> ${replyMessage}`,
-                embeds: [embed],
-                components: [],
-            });
         });
     },
 };

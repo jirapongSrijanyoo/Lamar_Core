@@ -4,9 +4,10 @@ const { syncCommands } = require('./utils/commandManager');
 const fs = require('fs');
 const path = require('path');
 const { saveServerData, deleteServerData } = require('./utils/serverDataManager');
-const { loginfo, logwarn, logerror, logdebug } = require('./utils/logger'); // นำเข้า logger
+const { loginfo, logwarn, logerror } = require('./utils/logger'); 
+const axios = require('axios'); 
+const { loadUtils } = require('./utils/loadUtils');  // เพิ่มการนำเข้า loadUtils
 
-// แสดงข้อความ ASCII Art
 console.log(`
 ██╗      █████╗ ███╗   ███╗ █████╗ ██████╗      ██████╗ ██████╗ ██████╗ ███████╗
 ██║     ██╔══██╗████╗ ████║██╔══██╗██╔══██╗    ██╔════╝██╔═══██╗██╔══██╗██╔════╝
@@ -16,20 +17,31 @@ console.log(`
 ╚══════╝╚═╝  ╚═╝╚═╝     ╚═╝╚═╝  ╚═╝╚═╝  ╚═╝     ╚═════╝ ╚═════╝ ╚═╝  ╚═╝╚══════╝
 `);
 
-// สร้าง Client
 const client = new Client({ intents: [GatewayIntentBits.Guilds] });
 client.commands = new Collection();
 
-// เมื่อบอทออนไลน์
+const sendHeartbeat = async () => {
+    const heartbeatUrl = 'https://sm.hetrixtools.net/hb/?s=5db297bfa86b673f1274ad98923d6630';
+    try {
+        const response = await axios.get(heartbeatUrl);
+        loginfo(`Heartbeat sent successfully: ${response.status}`);
+    } catch (error) {
+        logerror(`Error sending heartbeat: ${error.message}`);
+    }
+};
+
 client.once('ready', async () => {
     loginfo(`Logged in as ${client.user.tag}!`);
 
-    // ทำการบันทึกข้อมูลของทุกเซิร์ฟเวอร์ที่บอทเข้าร่วม
+    // บันทึกข้อมูลเซิร์ฟเวอร์ทั้งหมด
     client.guilds.cache.forEach(guild => {
         saveServerData(guild.id, guild.name);
     });
 
-    // โหลดคำสั่งจากโฟลเดอร์ commands
+    // โหลด utils (ตอนนี้โหลด utils แล้ว)
+    loadUtils();  // เรียกใช้ฟังก์ชัน loadUtils
+
+    // โหลดคำสั่งทั้งหมด
     const commandFiles = fs.readdirSync(path.join(__dirname, 'commands')).filter(file => file.endsWith('.js'));
     const commands = [];
     
@@ -39,19 +51,18 @@ client.once('ready', async () => {
         client.commands.set(command.data.name, command);
     }
 
-    // ลงทะเบียนคำสั่งแบบ global และลบคำสั่งที่ไม่ต้องการ
+    // ซิงค์คำสั่งกับเซิร์ฟเวอร์
     try {
         await syncCommands(commands, client.guilds.cache.map(guild => guild.id), process.env.TOKEN, client.user.id, loginfo);
     } catch (error) {
         logerror(`Error syncing commands: ${error.message}`);
     }
 
-    // อัปเดตข้อมูลทุก 10 วินาที
+    // อัปเดตข้อมูลเซิร์ฟเวอร์ทุก 10 วินาที
     setInterval(() => {
         const currentGuilds = client.guilds.cache.map(guild => guild.id);
         const existingFiles = fs.readdirSync(path.join(__dirname, 'discord_server')).map(file => file.replace('.json', ''));
 
-        // เช็คเซิร์ฟเวอร์ใหม่ที่เพิ่มเข้ามา
         currentGuilds.forEach(guildId => {
             if (!existingFiles.includes(guildId)) {
                 const guild = client.guilds.cache.get(guildId);
@@ -62,29 +73,31 @@ client.once('ready', async () => {
             }
         });
 
-        // เช็คเซิร์ฟเวอร์ที่บอทถูกออก
         existingFiles.forEach(guildId => {
             if (!currentGuilds.includes(guildId)) {
                 deleteServerData(guildId);
                 logwarn(`Removed server with ID: ${guildId}`);
             }
         });
-    }, 10000); // อัปเดตทุก 10 วินาที
+    }, 10000);
+
+    // ✅ ส่ง Heartbeat หลังจากทุกอย่างเสร็จ
+    sendHeartbeat();
+
+    // ส่ง Heartbeat ทุก 1 นาทีหลังจากนั้น
+    setInterval(sendHeartbeat, 60000);
 });
 
-// เมื่อบอทออกจากเซิร์ฟเวอร์
 client.on('guildDelete', guild => {
     deleteServerData(guild.id);
     logwarn(`Removed server: ${guild.name}`);
 });
 
-// เมื่อบอทเข้าร่วมเซิร์ฟเวอร์ใหม่
 client.on('guildCreate', guild => {
     saveServerData(guild.id, guild.name);
     loginfo(`Added new server: ${guild.name}`);
 });
 
-// เมื่อมีการใช้คำสั่ง slash
 client.on('interactionCreate', async interaction => {
     if (!interaction.isCommand()) return;
 
