@@ -27,7 +27,7 @@ node .
 ```
 bun run index.js
 ```
-# ความที่ต้องการ
+# ความต้องการ
 - NodeJs หรือ Bun
 - Discord Bot Token หาได้จาก [Discord Developers Portal](https://discord.com/developers/applications)
 - Discord User ID หาได้จากการกดคัดลอกไอดีผู้ใช้
