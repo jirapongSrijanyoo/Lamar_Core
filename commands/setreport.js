@@ -1,7 +1,7 @@
-const { SlashCommandBuilder, EmbedBuilder, ChannelType } = require('discord.js');
+const { SlashCommandBuilder, EmbedBuilder, ChannelType, PermissionFlagsBits } = require('discord.js');
 const fs = require('fs');
 const path = require('path');
-const { loginfo, logwarn, logerror, logdebug } = require('../utils/logger'); // นำเข้า logger ทั้งหมด
+const { loginfo, logwarn, logerror, logdebug } = require('../utils/logger');
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -9,116 +9,77 @@ module.exports = {
         .setDescription('สร้างห้องรายงานการใส่บทบาท'),
 
     async execute(interaction) {
-        const guildId = interaction.guild.id;
+        const guild = interaction.guild;
+        const guildId = guild.id;
         const serverFilePath = path.join(__dirname, '..', 'discord_server', `${guildId}.json`);
 
-        // ตรวจสอบว่าเป็นเจ้าของเซิร์ฟเวอร์หรือมี role admin
-        let serverData = {};
         try {
+            let serverData = {};
             if (fs.existsSync(serverFilePath)) {
                 serverData = JSON.parse(fs.readFileSync(serverFilePath, 'utf-8'));
             }
-            
-            const adminRoleId = serverData.admin;
-            if (!adminRoleId) {
-                logwarn(`Admin role not found in the server data for guild ${guildId}.`);
-                return interaction.reply('ไม่พบ role admin ในไฟล์ข้อมูล.');
-            }
 
-            const adminRole = interaction.guild.roles.cache.get(adminRoleId);
-            if (!adminRole) {
-                logwarn(`Admin role ${adminRoleId} not found in the server for guild ${guildId}.`);
-                return interaction.reply('ไม่พบ role admin ในเซิร์ฟเวอร์.');
-            }
+            const adminIds = serverData.admin || [];
 
-            if (interaction.user.id !== interaction.guild.ownerId && !interaction.member.roles.cache.has(adminRoleId)) {
-                logwarn(`User ${interaction.user.id} tried to use the command without permission in guild ${guildId}.`);
+            // ✅ เช็คสิทธิ์: เป็นเจ้าของเซิร์ฟเวอร์ หรือ มี permission Administrator หรือ อยู่ใน list admin
+            const isOwner = interaction.user.id === guild.ownerId;
+            const isAdminUser = adminIds.includes(interaction.user.id);
+            const hasAdminPermission = interaction.member.permissions.has(PermissionFlagsBits.Administrator);
+
+            if (!isOwner && !isAdminUser && !hasAdminPermission) {
+                logwarn(`User ${interaction.user.tag} unauthorized to run /set_report_channel`);
                 return interaction.reply('คุณไม่มีสิทธิ์ในการใช้งานคำสั่งนี้');
             }
 
-            // สร้างห้อง │・📘⁺。role-add
-            const roleAddChannel = await interaction.guild.channels.create({
-                name: '│・📘⁺。role-add',
-                type: ChannelType.GuildText,
-                reason: 'สร้างห้องสำหรับบันทึกการเพิ่ม role',
-                permissionOverwrites: [
-                    {
-                        id: interaction.guild.id,
-                        deny: ['ViewChannel'],
-                    },
-                    {
-                        id: adminRole.id,
-                        allow: ['ViewChannel'],
-                    },
-                ],
-            });
+            const channelsToCreate = [
+                { name: '│・📘⁺。role-add', reason: 'บันทึกการเพิ่ม role', key: 'roleAddChannelId' },
+                { name: '│・📘⁺。role-remove', reason: 'บันทึกการลบ role', key: 'roleRemoveChannelId' },
+                { name: '│・📘⁺。𝑩𝑨𝑵', reason: 'บันทึกการแบนผู้ใช้', key: 'banChannelId' },
+            ];
 
-            // สร้างห้อง │・📘⁺。role-remove
-            const roleRemoveChannel = await interaction.guild.channels.create({
-                name: '│・📘⁺。role-remove',
-                type: ChannelType.GuildText,
-                reason: 'สร้างห้องสำหรับบันทึกการลบ role',
-                permissionOverwrites: [
-                    {
-                        id: interaction.guild.id,
-                        deny: ['ViewChannel'],
-                    },
-                    {
-                        id: adminRole.id,
-                        allow: ['ViewChannel'],
-                    },
-                ],
-            });
+            const createdChannels = [];
 
-            // สร้างห้อง │・📘⁺。𝑩𝑨𝑵
-            const banChannel = await interaction.guild.channels.create({
-                name: '│・📘⁺。𝑩𝑨𝑵',
-                type: ChannelType.GuildText,
-                reason: 'สร้างห้องสำหรับบันทึกการแบนผู้ใช้',
-                permissionOverwrites: [
-                    {
-                        id: interaction.guild.id,
-                        deny: ['ViewChannel'],
-                    },
-                    {
-                        id: adminRole.id,
-                        allow: ['ViewChannel'],
-                    },
-                ],
-            });
+            for (const ch of channelsToCreate) {
+                const channel = await guild.channels.create({
+                    name: ch.name,
+                    type: ChannelType.GuildText,
+                    reason: ch.reason,
+                    permissionOverwrites: [
+                        {
+                            id: guild.id,
+                            deny: [PermissionFlagsBits.ViewChannel],
+                        },
+                        // ✅ ให้ทุกคนใน list admin (userId) เข้าถึงได้
+                        ...adminIds.map(id => ({
+                            id,
+                            allow: [PermissionFlagsBits.ViewChannel],
+                        }))
+                    ],
+                });
 
-            // บันทึกข้อมูล channel IDs ลงในไฟล์ JSON
-            serverData.roleAddChannelId = roleAddChannel.id;
-            serverData.roleRemoveChannelId = roleRemoveChannel.id;
-            serverData.banChannelId = banChannel.id;
+                serverData[ch.key] = channel.id;
+                createdChannels.push({ name: ch.name, id: channel.id });
+            }
 
             fs.writeFileSync(serverFilePath, JSON.stringify(serverData, null, 2));
 
-            // สร้าง Embed แจ้งเตือน
             const embed = new EmbedBuilder()
                 .setColor('#d6a3ff')
-                .setTitle('ห้องสำหรับบันทึกถูกสร้างเรียบร้อยแล้ว')
-                .setDescription(
-                    `- ห้องสำหรับการเพิ่ม role: <#${roleAddChannel.id}>\n` +
-                    `- ห้องสำหรับการลบ role: <#${roleRemoveChannel.id}>\n` +
-                    `- ห้องสำหรับการแบนผู้ใช้: <#${banChannel.id}>`
-                )
+                .setTitle('สร้างห้องรายงานสำเร็จ')
+                .setDescription(createdChannels.map(c => `- ${c.name}: <#${c.id}>`).join('\n'))
                 .setTimestamp()
                 .setFooter({
                     text: `จัดการโดย ${interaction.user.username}`,
                     iconURL: interaction.user.displayAvatarURL(),
                 });
 
-            // ส่งข้อความ Embed
             await interaction.reply({ embeds: [embed] });
 
-            // แจ้งเตือนใน console และ log
-            loginfo(`[${interaction.guild.name}] user ${interaction.user.username}created a room role-add, role-remove, และ ban`);
+            loginfo(`[${guild.name}] ${interaction.user.tag} ได้สร้างห้องรายงานทั้งหมดแล้ว`);
 
         } catch (error) {
-            // หากเกิดข้อผิดพลาด
-            logerror(`Error while creating report channels in guild ${guildId}: ${error.message}`);
-            await interaction.reply({ content: 'เกิดข้อผิดพลาดขณะสร้างห้องรายงาน กรุณาลองใหม่อีกครั้ง', ephemeral: true });
+            logerror(`Error in /set_report_channel for guild ${guildId}: ${error.message}`);
+            return interaction.reply({ content: '❌ เกิดข้อผิดพลาดขณะสร้างห้องรายงาน กรุณาลองใหม่อีกครั้ง', ephemeral: true });
         }
-    },
+    }
 };
