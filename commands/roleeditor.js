@@ -1,7 +1,7 @@
 const { SlashCommandBuilder, ActionRowBuilder, StringSelectMenuBuilder, EmbedBuilder } = require('discord.js');
 const fs = require('fs');
 const path = require('path');
-const { loginfo, logwarn, logerror, logdebug } = require('../utils/logger'); // นำเข้า logger
+const { loginfo, logwarn, logerror, logdebug } = require('../utils/logger');
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -12,48 +12,33 @@ module.exports = {
     async execute(interaction) {
         try {
             logdebug(`Executing /role_editor command by user ${interaction.user.username}`);
-            
-            // ตรวจสอบว่าเป็นเจ้าของเซิร์ฟเวอร์หรือไม่
-            if (interaction.user.id !== interaction.guild.ownerId) {
+
+            // ตรวจสอบว่าเป็นผู้ดูแลหรือไม่
+            if (!interaction.member.permissions.has('Administrator')) {
                 logwarn(`Unauthorized access attempt by ${interaction.user.username}`);
-                return interaction.reply('คุณไม่มีสิทธิ์ในการใช้งานคำสั่งนี้');
+                return interaction.reply('❌ คุณไม่มีสิทธิ์ในการใช้งานคำสั่งนี้ (ต้องมีสิทธิ์แอดมิน)');
             }
 
-            const role = interaction.options.getMentionable('role'); // ดึง role ที่เลือก
+            const role = interaction.options.getMentionable('role');
             const guildId = interaction.guild.id;
+            const guildName = interaction.guild.name;
             const serverFilePath = path.join(__dirname, '..', 'discord_server', `${guildId}.json`);
 
-            // ดึงข้อมูล botName และ botAvatar จากโปรไฟล์ของบอท
             const botName = interaction.client.user.username;
             const botAvatar = interaction.client.user.displayAvatarURL();
 
-            // สร้างแถบเมนูให้เลือกประเภท role
-            const actionRow = new ActionRowBuilder()
-                .addComponents(
-                    new StringSelectMenuBuilder()
-                        .setCustomId('roleSelect')
-                        .setPlaceholder('เลือกประเภทของ role หรือ ลบข้อมูล')
-                        .addOptions(
-                            {
-                                label: 'เตือนครั้งที่ 1',
-                                value: 'yellow',
-                            },
-                            {
-                                label: 'เตือนครั้งที่ 2',
-                                value: 'orange',
-                            },
-                            {
-                                label: 'แอดมิน',
-                                value: 'admin',
-                            },
-                            {
-                                label: 'ลบข้อมูล',
-                                value: 'delete',
-                            }
-                        ),
-                );
+            const actionRow = new ActionRowBuilder().addComponents(
+                new StringSelectMenuBuilder()
+                    .setCustomId('roleSelect')
+                    .setPlaceholder('เลือกประเภทของ role หรือ ลบข้อมูล')
+                    .addOptions(
+                        { label: 'เตือนครั้งที่ 1', value: 'yellow_card' },
+                        { label: 'เตือนครั้งที่ 2', value: 'orange_card' },
+                        { label: 'แอดมิน', value: 'admin' },
+                        { label: 'ลบข้อมูล', value: 'delete' }
+                    )
+            );
 
-            // สร้างข้อความ embed ที่แสดงการเลือกประเภทของ role
             const embed = new EmbedBuilder()
                 .setColor('#d6a3ff')
                 .setAuthor({ name: `${botName} | Role editor`, iconURL: botAvatar })
@@ -61,105 +46,135 @@ module.exports = {
                 .setDescription(`คุณได้เลือก role: **${role.name}**`)
                 .setTimestamp();
 
-            // ส่งข้อความ embed พร้อมแถบเมนูให้ผู้ใช้กดเลือก
-            await interaction.reply({
-                embeds: [embed],
-                components: [actionRow]
-            });
+            await interaction.reply({ embeds: [embed], components: [actionRow] });
 
-            // รอให้ผู้ใช้เลือกในเมนู
-            const filter = (selectInteraction) => selectInteraction.user.id === interaction.user.id;
+            const filter = (i) => i.user.id === interaction.user.id;
             const collector = interaction.channel.createMessageComponentCollector({ filter, time: 60000 });
 
             collector.on('collect', async (selectInteraction) => {
                 try {
-                    let roleCategory = selectInteraction.values[0];
+                    const roleCategory = selectInteraction.values[0];
                     logdebug(`User ${interaction.user.username} selected role category: ${roleCategory}`);
 
-                    // ลบข้อมูล role จากไฟล์ JSON
-                    if (roleCategory === 'delete') {
-                        let serverData = {};
-                        if (fs.existsSync(serverFilePath)) {
-                            serverData = JSON.parse(fs.readFileSync(serverFilePath, 'utf-8'));
-                        }
+                    let serverData = {
+                        guildName,
+                        guildId,
+                        yellow_card: "",
+                        orange_card: "",
+                        admin: []
+                    };
 
-                        const roleFound = Object.keys(serverData).find(key => serverData[key] === role.id);
+                    if (fs.existsSync(serverFilePath)) {
+                        serverData = JSON.parse(fs.readFileSync(serverFilePath, 'utf-8'));
+                    }
 
-                        if (roleFound) {
-                            delete serverData[roleFound];
-                            fs.writeFileSync(serverFilePath, JSON.stringify(serverData, null, 2));
-
-                            const embed = new EmbedBuilder()
-                                .setColor('#d6a3ff')
-                                .setAuthor({ name: `${botName} | Role editor`, iconURL: botAvatar })
-                                .setTitle('ข้อมูลการลบ role')
-                                .setDescription(`ข้อมูล role "${role.name}" ถูกลบออกจากไฟล์ข้อมูลเรียบร้อยแล้ว`)
-                                .setTimestamp()
-                                .setFooter({ text: `จัดการโดย ${interaction.user.username}`, iconURL: interaction.user.displayAvatarURL() });
-
-                            await selectInteraction.reply({ embeds: [embed], ephemeral: true });
-
-                            loginfo(`[${interaction.guild.name}] ผู้ใช้ ${interaction.user.username} ได้ทำการลบข้อมูล role: ${role.name}`);
-                        } else {
-                            await selectInteraction.reply({
-                                content: `ไม่พบข้อมูล role "${role.name}" ในไฟล์ข้อมูล`,
-                                ephemeral: true
+                    switch (roleCategory) {
+                        case 'delete': {
+                            let foundKey = Object.keys(serverData).find(key => {
+                                if (key === 'admin') return serverData.admin.includes(role.id);
+                                return serverData[key] === role.id;
                             });
-                            logwarn(`Role "${role.name}" not found in data file for ${interaction.guild.name}`);
-                        }
-                    } else {
-                        let serverData = {};
-                        if (fs.existsSync(serverFilePath)) {
-                            serverData = JSON.parse(fs.readFileSync(serverFilePath, 'utf-8'));
+
+                            if (foundKey) {
+                                if (foundKey === 'admin') {
+                                    serverData.admin = serverData.admin.filter(id => id !== role.id);
+                                } else {
+                                    serverData[foundKey] = "";
+                                }
+
+                                fs.writeFileSync(serverFilePath, JSON.stringify(serverData, null, 2));
+
+                                const embed = new EmbedBuilder()
+                                    .setColor('#d6a3ff')
+                                    .setAuthor({ name: `${botName} | Role editor`, iconURL: botAvatar })
+                                    .setTitle('ข้อมูลการลบ role')
+                                    .setDescription(`Role "${role.name}" ถูกลบออกจากประเภท "${foundKey}"`)
+                                    .setTimestamp()
+                                    .setFooter({ text: `จัดการโดย ${interaction.user.username}`, iconURL: interaction.user.displayAvatarURL() });
+
+                                await selectInteraction.reply({ embeds: [embed], ephemeral: true });
+                                loginfo(`[${guildName}] ลบ role: ${role.name} ออกจาก "${foundKey}"`);
+                            } else {
+                                await selectInteraction.reply({ content: `ไม่พบข้อมูล role "${role.name}"`, ephemeral: true });
+                                logwarn(`Role "${role.name}" not found in data`);
+                            }
+
+                            break;
                         }
 
-                        const existingRoleCategory = Object.keys(serverData).find(key => serverData[key] === role.id);
+                        case 'yellow_card':
+                        case 'orange_card': {
+                            if (serverData[roleCategory] === role.id) {
+                                await selectInteraction.reply({
+                                    content: `Role "${role.name}" ถูกบันทึกไว้แล้วในประเภทนี้`,
+                                    ephemeral: true
+                                });
+                                break;
+                            }
 
-                        if (existingRoleCategory) {
-                            await selectInteraction.reply({
-                                content: `ผิดพลาด Role "${role.name}" ถูกบันทึกไว้แล้วในประเภท "${existingRoleCategory}"`,
-                                ephemeral: true
-                            });
-                            logwarn(`Role "${role.name}" already exists in category "${existingRoleCategory}"`);
-                        } else {
                             serverData[roleCategory] = role.id;
                             fs.writeFileSync(serverFilePath, JSON.stringify(serverData, null, 2));
 
                             const embed = new EmbedBuilder()
                                 .setColor('#d6a3ff')
                                 .setAuthor({ name: `${botName} | Role editor`, iconURL: botAvatar })
-                                .setTitle('ข้อมูลการตั้งค่า role')
-                                .setDescription(`Role "${role.name}" ถูกบันทึกในประเภท: ${roleCategory}`)
+                                .setTitle('เพิ่ม Role สำเร็จ')
+                                .setDescription(`Role "${role.name}" ถูกกำหนดให้กับ "${roleCategory}"`)
                                 .setTimestamp()
                                 .setFooter({ text: `จัดการโดย ${interaction.user.username}`, iconURL: interaction.user.displayAvatarURL() });
 
                             await selectInteraction.reply({ embeds: [embed], ephemeral: true });
-
-                            loginfo(`[${interaction.guild.name}] ผู้ใช้ ${interaction.user.username} ได้บันทึก role: ${role.name} ลงในประเภท "${roleCategory}"`);
+                            loginfo(`[${guildName}] ตั้งค่า role: ${role.name} -> ${roleCategory}`);
+                            break;
                         }
+
+                        case 'admin': {
+                            if (serverData.admin.includes(role.id)) {
+                                await selectInteraction.reply({
+                                    content: `Role "${role.name}" มีอยู่ในประเภท "admin" แล้ว`,
+                                    ephemeral: true
+                                });
+                                break;
+                            }
+
+                            serverData.admin.push(role.id);
+                            fs.writeFileSync(serverFilePath, JSON.stringify(serverData, null, 2));
+
+                            const embed = new EmbedBuilder()
+                                .setColor('#d6a3ff')
+                                .setAuthor({ name: `${botName} | Role editor`, iconURL: botAvatar })
+                                .setTitle('เพิ่ม Role สำเร็จ')
+                                .setDescription(`Role "${role.name}" ถูกเพิ่มในประเภท "admin"`)
+                                .setTimestamp()
+                                .setFooter({ text: `จัดการโดย ${interaction.user.username}`, iconURL: interaction.user.displayAvatarURL() });
+
+                            await selectInteraction.reply({ embeds: [embed], ephemeral: true });
+                            loginfo(`[${guildName}] เพิ่ม role: ${role.name} -> admin`);
+                            break;
+                        }
+
+                        default:
+                            await selectInteraction.reply({
+                                content: `⚠️ ไม่รู้จักหมวดหมู่ role`,
+                                ephemeral: true
+                            });
+                            logwarn(`Unknown role category selected: ${roleCategory}`);
                     }
 
                     collector.stop();
                 } catch (error) {
                     logerror(`Error handling role selection: ${error.message}`);
-                    await selectInteraction.reply({
-                        content: 'เกิดข้อผิดพลาดขณะเลือกประเภท role!',
-                        ephemeral: true
-                    });
+                    await selectInteraction.reply({ content: 'เกิดข้อผิดพลาด!', ephemeral: true });
                 }
             });
 
             collector.on('end', () => {
                 if (!interaction.replied) {
-                    interaction.followUp({
-                        content: 'หมดเวลาในการเลือกประเภท role',
-                        ephemeral: true
-                    });
+                    interaction.followUp({ content: 'หมดเวลาในการเลือกประเภท role', ephemeral: true });
                 }
             });
         } catch (error) {
             logerror(`Error executing /role_editor: ${error.message}`);
-
             if (interaction.replied || interaction.deferred) {
                 await interaction.editReply({ content: "❌ มีข้อผิดพลาดเกิดขึ้น!" });
             } else {
