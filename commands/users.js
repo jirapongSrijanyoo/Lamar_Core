@@ -1,24 +1,24 @@
-const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, StringSelectMenuBuilder } = require('discord.js'); 
+const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, StringSelectMenuBuilder } = require('discord.js');
 const fs = require('fs');
 const path = require('path');
-const { loginfo, logwarn, logerror, logdebug } = require('../utils/logger'); // นำเข้า logger ทั้งหมด
+const { loginfo, logwarn, logerror, logdebug } = require('../utils/logger');
 
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('manage_users')
         .setDescription('จัดการผู้ใช้ในเซิร์ฟเวอร์')
-        .addUserOption(option => 
+        .addUserOption(option =>
             option.setName('user')
                 .setDescription('เลือกผู้ใช้ที่ต้องการจัดการ')
                 .setRequired(true)
         ),
+
     async execute(interaction) {
         const guildId = interaction.guild.id;
         const serverFilePath = path.join(__dirname, '..', 'discord_server', `${guildId}.json`);
-        
+
         logdebug(`Starting execution of manage_users command for guild ${guildId}...`);
 
-        // ตรวจสอบว่าไฟล์เซิร์ฟเวอร์มีอยู่หรือไม่
         let serverData = {};
         try {
             if (fs.existsSync(serverFilePath)) {
@@ -32,174 +32,141 @@ module.exports = {
             return interaction.reply('เกิดข้อผิดพลาดในการอ่านข้อมูลเซิร์ฟเวอร์');
         }
 
-        // ตรวจสอบว่า role ที่ต้องการมีอยู่ในไฟล์หรือไม่
-        const yellowRoleId = serverData.yellow;
-        const orangeRoleId = serverData.orange;
-        const roleAddChannelId = serverData.roleAddChannelId;
-        const roleRemoveChannelId = serverData.roleRemoveChannelId;
-        const banChannelId = serverData.banChannelId;
-        const adminRoleId = serverData.admin;  // เพิ่มการอ่านข้อมูลบทบาท Admin
+        const { yellow_card, orange_card, roleAddChannelId, roleRemoveChannelId, banChannelId, admin } = serverData;
 
-        if (!yellowRoleId || !orangeRoleId || !roleAddChannelId || !roleRemoveChannelId || !adminRoleId || !banChannelId) {
-            logwarn(`Missing server data for guild ${guildId}.`);
+        if (!yellow_card || !orange_card || !roleAddChannelId || !roleRemoveChannelId || !banChannelId || !admin) {
             return interaction.reply('ข้อมูลเซิร์ฟเวอร์ไม่ครบถ้วน กรุณาตรวจสอบการตั้งค่าก่อน');
         }
 
-        // ตรวจสอบบทบาทของผู้ที่ใช้คำสั่ง
-        const userRoles = interaction.member.roles.cache;
-        if (!userRoles.has(adminRoleId)) {
-            logwarn(`User ${interaction.user.id} attempted to use the command without permission in guild ${guildId}.`);
+        // ✅ เช็คว่า user มีบทบาทตรงกับบทบาทใน admin ของ JSON หรือไม่
+        const hasAdminRole = interaction.member.roles.cache.some(role => admin.includes(role.id));
+        const hasAdminPerms = interaction.member.permissions.has('Administrator') || hasAdminRole;
+        
+        if (!hasAdminPerms) {
             return interaction.reply('คุณไม่มีสิทธิ์ในการใช้คำสั่งนี้');
         }
 
         const selectedUser = interaction.options.getUser('user');
-        const member = interaction.guild.members.cache.get(selectedUser.id);
+        const member = await interaction.guild.members.fetch(selectedUser.id).catch(() => null);
 
         if (!member) {
-            logwarn(`User ${selectedUser.id} not found in guild ${guildId}.`);
             return interaction.reply('ไม่พบผู้ใช้ที่เลือก');
         }
 
-        logdebug(`User ${selectedUser.id} selected for management in guild ${guildId}.`);
-
-        // สร้าง Embed สำหรับรายละเอียดผู้ใช้
         const userEmbed = new EmbedBuilder()
             .setColor('#0099ff')
             .setTitle(`${member.user.username}`)
-            .setDescription(`ต้องการดำเนินอะไรการกับผู้ใช้ ${member.user.username}`)
+            .setDescription(`ต้องการดำเนินการใดกับผู้ใช้ ${member.user.username}`)
             .setThumbnail(member.user.displayAvatarURL())
-            .addFields(
-                { name: 'ID ผู้ใช้', value: member.user.id, inline: true },
-            )
+            .addFields({ name: 'ID ผู้ใช้', value: member.user.id, inline: true })
             .setTimestamp()
             .setFooter({ text: 'เลือกการกระทำด้านล่าง' });
 
-        const actionRow = new ActionRowBuilder()
-            .addComponents(
-                new StringSelectMenuBuilder()
-                    .setCustomId('user_action')
-                    .setPlaceholder('เลือกการกระทำ')
-                    .addOptions(
-                        { label: 'เพิ่มเตือนครั้งที่ 1', value: 'add_yellow' },
-                        { label: 'เพิ่มเตือนครั้งที่ 2', value: 'add_orange' },
-                        { label: 'ลบเตือนครั้งที่ 1', value: 'remove_yellow' },
-                        { label: 'ลบเตือนครั้งที่ 2', value: 'remove_orange' },
-                        { label: 'แบนผู้ใช้', value: 'ban_user' },
-                        { label: 'ยกเลิก', value: 'cancel' },
-                    ),
-            );
+        const actionRow = new ActionRowBuilder().addComponents(
+            new StringSelectMenuBuilder()
+                .setCustomId('user_action')
+                .setPlaceholder('เลือกการกระทำ')
+                .addOptions(
+                    { label: 'เพิ่มเตือนครั้งที่ 1', value: 'add_yellow' },
+                    { label: 'เพิ่มเตือนครั้งที่ 2', value: 'add_orange' },
+                    { label: 'ลบเตือนครั้งที่ 1', value: 'remove_yellow' },
+                    { label: 'ลบเตือนครั้งที่ 2', value: 'remove_orange' },
+                    { label: 'แบนผู้ใช้', value: 'ban_user' },
+                    { label: 'ยกเลิก', value: 'cancel' }
+                )
+        );
 
         await interaction.reply({
-            content: `จัดการผู้ใช้: ${member.user.username}`,
+            content: `กำลังจัดการกับผู้ใช้: **${member.user.username}**`,
             embeds: [userEmbed],
-            components: [actionRow],
+            components: [actionRow]
         });
 
-        // รอให้ผู้ใช้เลือกการกระทำ
         const filter = i => i.customId === 'user_action' && i.user.id === interaction.user.id;
-        const collector = interaction.channel.createMessageComponentCollector({ filter });
+        const collector = interaction.channel.createMessageComponentCollector({ filter, max: 1 });
 
         collector.on('collect', async (actionInteraction) => {
-            // ตรวจสอบว่าการเลือกการกระทำนี้ได้รับการตอบกลับแล้วหรือไม่
-            if (actionInteraction.replied || actionInteraction.deferred) {
-                return;  // หยุดทำงานหากได้ตอบกลับแล้ว
-            }
-
             const action = actionInteraction.values[0];
-            const guild = interaction.guild;
-
             let replyMessage = '';
-            let embed = new EmbedBuilder()
+            const embed = new EmbedBuilder()
                 .setColor('#0099ff')
-                .setTitle(`การจัดการกับผู้ใช้: @${member.user.username}`)
+                .setTitle(`การจัดการกับ: ${member.user.username}`)
                 .addFields(
-                    { name: 'User Nick', value: member.nickname || 'ไม่มี', inline: true },
-                    { name: 'User Name', value: member.user.username, inline: true },
-                    { name: 'User ID', value: member.user.id, inline: true },
-                    { name: 'จัดการโดย', value: `${interaction.user}`, inline: false },
+                    { name: 'ชื่อเล่น', value: member.nickname || 'ไม่มี', inline: true },
+                    { name: 'ชื่อผู้ใช้', value: member.user.username, inline: true },
+                    { name: 'ID ผู้ใช้', value: member.user.id, inline: true },
+                    { name: 'ดำเนินการโดย', value: `<@${interaction.user.id}>`, inline: false },
                 )
-                .setTimestamp()
-                .setThumbnail(member.user.displayAvatarURL());
+                .setThumbnail(member.user.displayAvatarURL())
+                .setTimestamp();
 
             try {
                 switch (action) {
                     case 'add_yellow':
-                        await member.roles.add(yellowRoleId);
-                        replyMessage = `ได้รับเตือนครั้งที่ 1 แล้ว`;
-
-                        // ส่งข้อมูลไปยังห้อง roleAddChannelId
-                        const roleAddChannel = guild.channels.cache.get(roleAddChannelId);
-                        if (roleAddChannel) {
-                            roleAddChannel.send({content: `${member.user}`, embeds: [embed.setTitle(`@${member.user.username} ถูกเพิ่มเตือนครั้งที่ 1`)] });
-                        }
+                        await member.roles.add(yellow_card);
+                        replyMessage = `ได้รับการเตือนครั้งที่ 1`;
+                        interaction.guild.channels.cache.get(roleAddChannelId)?.send({
+                            content: `<@${member.user.id}>`,
+                            embeds: [embed.setTitle(`${member.user.username} ถูกเตือนครั้งที่ 1`)]
+                        });
                         break;
 
                     case 'add_orange':
-                        await member.roles.add(orangeRoleId);
-                        replyMessage = `ได้รับเตือนครั้งที่ 2 แล้ว`;
-
-                        // ส่งข้อมูลไปยังห้อง roleAddChannelId
-                        const roleAddOrangeChannel = guild.channels.cache.get(roleAddChannelId);
-                        if (roleAddOrangeChannel) {
-                            roleAddOrangeChannel.send({content: `${member.user}`, embeds: [embed.setTitle(`@${member.user.username} ถูกเพิ่มเตือนครั้งที่ 2`)] });
-                        }
+                        await member.roles.add(orange_card);
+                        replyMessage = `ได้รับการเตือนครั้งที่ 2`;
+                        interaction.guild.channels.cache.get(roleAddChannelId)?.send({
+                            content: `<@${member.user.id}>`,
+                            embeds: [embed.setTitle(`${member.user.username} ถูกเตือนครั้งที่ 2`)]
+                        });
                         break;
 
                     case 'remove_yellow':
-                        await member.roles.remove(yellowRoleId);
-                        replyMessage = `ลบเตือนครั้งที่ 1 แล้ว`;
-
-                        // ส่งข้อมูลไปยังห้อง roleRemoveChannelId
-                        const roleRemoveChannel = guild.channels.cache.get(roleRemoveChannelId);
-                        if (roleRemoveChannel) {
-                            roleRemoveChannel.send({content: `${member.user}`, embeds: [embed.setTitle(`@${member.user.username} ถูกลบเตือนครั้งที่ 1`)] });
-                        }
+                        await member.roles.remove(yellow_card);
+                        replyMessage = `ลบการเตือนครั้งที่ 1 แล้ว`;
+                        interaction.guild.channels.cache.get(roleRemoveChannelId)?.send({
+                            content: `<@${member.user.id}>`,
+                            embeds: [embed.setTitle(`${member.user.username} ถูกลบเตือนครั้งที่ 1`)]
+                        });
                         break;
 
                     case 'remove_orange':
-                        await member.roles.remove(orangeRoleId);
-                        replyMessage = `ลบเตือนครั้งที่ 2 แล้ว`;
-
-                        // ส่งข้อมูลไปยังห้อง roleRemoveChannelId
-                        const roleRemoveOrangeChannel = guild.channels.cache.get(roleRemoveChannelId);
-                        if (roleRemoveOrangeChannel) {
-                            roleRemoveOrangeChannel.send({content: `${member.user}`, embeds: [embed.setTitle(`@${member.user.username} ถูกลบเตือนครั้งที่ 2`)] });
-                        }
+                        await member.roles.remove(orange_card);
+                        replyMessage = `ลบการเตือนครั้งที่ 2 แล้ว`;
+                        interaction.guild.channels.cache.get(roleRemoveChannelId)?.send({
+                            content: `<@${member.user.id}>`,
+                            embeds: [embed.setTitle(`${member.user.username} ถูกลบเตือนครั้งที่ 2`)]
+                        });
                         break;
 
                     case 'ban_user':
-                        await member.ban({ reason: 'แบนจากการใช้คำสั่งจัดการผู้ใช้' });
-                        replyMessage = `ถูกแบนแล้ว`;
-
-                        // ส่งข้อมูลไปยังห้อง banChannelId
-                        const banChannel = guild.channels.cache.get(banChannelId); // เปลี่ยนชื่อเป็น banChannel
-                        if (banChannel) {
-                            banChannel.send({ 
-                                content: `${member.user}`, 
-                                embeds: [embed.setTitle(`@${member.user.username} ถูกแบน`)] 
-                            });
-                        }
+                        await member.ban({ reason: 'โดนสั่งแบนจากผู้ดูแล' });
+                        replyMessage = `ผู้ใช้นี้ถูกแบนแล้ว`;
+                        interaction.guild.channels.cache.get(banChannelId)?.send({
+                            content: `<@${member.user.id}>`,
+                            embeds: [embed.setTitle(`${member.user.username} ถูกแบนจากเซิร์ฟเวอร์`)]
+                        });
                         break;
 
                     case 'cancel':
-                        replyMessage = 'การกระทำถูกยกเลิก';
+                        replyMessage = 'ยกเลิกการดำเนินการ';
                         break;
                 }
 
-                // ตอบกลับครั้งเดียว
+                // แก้ไขตรงนี้ให้ส่งข้อมูลของสมาชิกที่ถูกกระทำ
                 await actionInteraction.update({
-                    content: `<@${interaction.user.id}> ${replyMessage}`,
+                    content: `ดำเนินการกับ <@${member.user.id}>: ${replyMessage}`,
                     embeds: [embed],
-                    components: [],
+                    components: []
                 });
+
             } catch (error) {
-                logerror(`Error while performing action ${action} for user ${selectedUser.id} in guild ${guildId}: ${error.message}`);
+                logerror(`เกิดข้อผิดพลาด: ${error.message}`);
                 await actionInteraction.update({
-                    content: `เกิดข้อผิดพลาดในการดำเนินการ`,
-                    embeds: [embed],
-                    components: [],
+                    content: `⚠️ ไม่สามารถดำเนินการได้: ${error.message}`,
+                    embeds: [],
+                    components: []
                 });
             }
         });
-    },
+    }
 };
