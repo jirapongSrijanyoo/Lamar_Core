@@ -105,6 +105,17 @@ module.exports = {
                     case 'add_yellow':
                         await member.roles.add(yellow_card);
                         replyMessage = `ได้รับการเตือนครั้งที่ 1`;
+
+                        // Update JSON file
+                        serverData.users = serverData.users || [];
+                        const yellowUser = serverData.users.find(u => u.user === member.user.id);
+                        if (yellowUser) {
+                            if (!yellowUser.role.includes('yellow')) yellowUser.role.push('yellow');
+                        } else {
+                            serverData.users.push({ user: member.user.id, role: ['yellow'] });
+                        }
+                        fs.writeFileSync(serverFilePath, JSON.stringify(serverData, null, 2));
+
                         interaction.guild.channels.cache.get(roleAddChannelId)?.send({
                             content: `<@${member.user.id}>`,
                             embeds: [embed.setTitle(`${member.user.username} ถูกเตือนครั้งที่ 1`)]
@@ -114,6 +125,17 @@ module.exports = {
                     case 'add_orange':
                         await member.roles.add(orange_card);
                         replyMessage = `ได้รับการเตือนครั้งที่ 2`;
+
+                        // Update JSON file
+                        serverData.users = serverData.users || [];
+                        const orangeUser = serverData.users.find(u => u.user === member.user.id);
+                        if (orangeUser) {
+                            if (!orangeUser.role.includes('orange')) orangeUser.role.push('orange');
+                        } else {
+                            serverData.users.push({ user: member.user.id, role: ['orange'] });
+                        }
+                        fs.writeFileSync(serverFilePath, JSON.stringify(serverData, null, 2));
+
                         interaction.guild.channels.cache.get(roleAddChannelId)?.send({
                             content: `<@${member.user.id}>`,
                             embeds: [embed.setTitle(`${member.user.username} ถูกเตือนครั้งที่ 2`)]
@@ -123,6 +145,15 @@ module.exports = {
                     case 'remove_yellow':
                         await member.roles.remove(yellow_card);
                         replyMessage = `ลบการเตือนครั้งที่ 1 แล้ว`;
+
+                        // Update JSON file
+                        serverData.users = serverData.users || [];
+                        const removeYellowUser = serverData.users.find(u => u.user === member.user.id);
+                        if (removeYellowUser) {
+                            removeYellowUser.role = removeYellowUser.role.filter(r => r !== 'yellow');
+                        }
+                        fs.writeFileSync(serverFilePath, JSON.stringify(serverData, null, 2));
+
                         interaction.guild.channels.cache.get(roleRemoveChannelId)?.send({
                             content: `<@${member.user.id}>`,
                             embeds: [embed.setTitle(`${member.user.username} ถูกลบเตือนครั้งที่ 1`)]
@@ -132,6 +163,15 @@ module.exports = {
                     case 'remove_orange':
                         await member.roles.remove(orange_card);
                         replyMessage = `ลบการเตือนครั้งที่ 2 แล้ว`;
+
+                        // Update JSON file
+                        serverData.users = serverData.users || [];
+                        const removeOrangeUser = serverData.users.find(u => u.user === member.user.id);
+                        if (removeOrangeUser) {
+                            removeOrangeUser.role = removeOrangeUser.role.filter(r => r !== 'orange');
+                        }
+                        fs.writeFileSync(serverFilePath, JSON.stringify(serverData, null, 2));
+
                         interaction.guild.channels.cache.get(roleRemoveChannelId)?.send({
                             content: `<@${member.user.id}>`,
                             embeds: [embed.setTitle(`${member.user.username} ถูกลบเตือนครั้งที่ 2`)]

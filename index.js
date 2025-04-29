@@ -11,7 +11,7 @@ console.log(`
     console.log(`--------------------------------------------------------------------------------------------------------------------------------------------------`);
 
 require('dotenv').config();
-const { Client, GatewayIntentBits, Collection } = require('discord.js');
+const { Client, GatewayIntentBits, Collection, EmbedBuilder } = require('discord.js');
 const { syncCommands } = require('./utils/commandManager');
 const fs = require('fs');
 const path = require('path');
@@ -20,7 +20,10 @@ const { loginfo, logwarn, logerror } = require('./utils/logger');
 const axios = require('axios'); 
 const { loadUtils } = require('./utils/loadUtils');  // เพิ่มการนำเข้า loadUtils
 
-const client = new Client({ intents: [GatewayIntentBits.Guilds] });
+const client = new Client({ intents: [
+    GatewayIntentBits.Guilds,
+    GatewayIntentBits.GuildMembers
+] });
 client.commands = new Collection();
 
 const sendHeartbeat = async () => {
@@ -99,6 +102,77 @@ client.on('guildDelete', guild => {
 client.on('guildCreate', guild => {
     saveServerData(guild.id, guild.name);
     loginfo(`Added new server: ${guild.name}`);
+});
+
+client.on('guildMemberAdd', async member => {
+    loginfo(`New member joined: ${member.user.tag} in guild ${member.guild.name}`);
+    try {
+        const serverDataPath = path.join(__dirname, 'discord_server', `${member.guild.id}.json`);
+        if (fs.existsSync(serverDataPath)) {
+            const embed = new EmbedBuilder()
+              .setColor("#0099ff")
+              .setTitle(`${member.user.username} ถูกเพิ่มยศคืน`)
+              .addFields(
+                {
+                  name: "ชื่อเล่น",
+                  value: member.nickname || "ไม่มี",
+                  inline: true,
+                },
+                {
+                  name: "ชื่อผู้ใช้",
+                  value: member.user.username,
+                  inline: true,
+                },
+                {
+                  name: "ID ผู้ใช้",
+                  value: member.user.id,
+                  inline: true,
+                },
+                {
+                  name: "ดำเนินการโดย",
+                  value: `ระบบอัตโนมัติ`,
+                  inline: false,
+                }
+              )
+              .setThumbnail(member.user.displayAvatarURL())
+              .setTimestamp();
+            
+            const serverData = JSON.parse(fs.readFileSync(serverDataPath, 'utf8'));
+            const userData = serverData.users?.find(user => user.user === member.id);
+
+            if (userData) {
+                const rolesAdded = [];
+                const rolePromises = userData.role.map(async roleId => {
+                    const role = member.guild.roles.cache.get(serverData[roleId + '_card']);
+                    if (role) {
+                        try {
+                            await member.roles.add(role);
+                            rolesAdded.push(roleId + '_card');
+                            loginfo(`Added role "${roleId}_card" to user ${member.user.tag}`);
+                        } catch (err) {
+                            logerror(`Error adding role "${roleId}_card" to user ${member.user.tag}: ${err.message}`);
+                        }
+                    }
+                });
+
+                await Promise.all(rolePromises); // Wait for all role additions to complete
+
+                if (rolesAdded.length > 0) {
+                    embed.setDescription(`ถูกเพิ่มยศคืนหลังจากเข้าเซิร์ฟเวอร์ใหม่! ยศที่ถูกเพิ่ม: ${rolesAdded.map(roleId => `<@&${serverData[roleId]}>`).join(', ')}`);
+                    const channel = member.guild.channels.cache.get(serverData.roleAddChannelId);
+                    if (channel) {
+                        channel.send({ content: `<@${member.user.id}>`, embeds: [embed] });
+                    } else {
+                        logwarn(`Channel "roleAddChanelId" not found in guild ${member.guild.name}`);
+                    }
+                } else {
+                    logwarn(`No roles to add for user ${member.user.tag} in guild ${member.guild.name}`);
+                }
+            }
+        }
+    } catch (error) {
+        logerror(`Error assigning role to user ${member.user.tag}: ${error.message}`);
+    }
 });
 
 client.on('interactionCreate', async interaction => {
